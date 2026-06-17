@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<!--
+  ATLAS — EOL INFRASTRUCTURE ASSESSMENT DASHBOARD — CANONICAL TEMPLATE
+  Same Unisys/Flowserve SDR house style as the Orion dashboard (teal primary,
+  dark-navy sidebar, KPI cards, chart-grid, RAG badges, print rules).
+  Atlas fills the {{PLACEHOLDERS}} and chart DATA blocks from the analysed
+  device inventory. Dual-layer risk: Hardware EOL + OS/Software EOL.
+  Self-contained: only Chart.js + Font Awesome load from CDN; everything
+  degrades gracefully offline.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{CLIENT}} — EOL Assessment — {{GENERATED_TS}}</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{--primary:#007272;--primary-light:#00b894;--primary-dark:#004f4f;--sidebar-bg:#0d1a2e;--sidebar-hover:#0f2040;--accent-blue:#0f2040;--accent-green:#27ae60;--accent-red:#e74c3c;--accent-amber:#f39c12;--accent-purple:#7c4dff;--bg:#f2f5f9;--card-bg:#fff;--text:#1a2332;--text-light:#8898a9;--border:#c8d4e3;--shadow:0 2px 12px rgba(0,0,0,.08);}
+*{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;}
+.sidebar{width:260px;background:var(--sidebar-bg);color:#fff;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:1000;transition:transform .3s;}
+.sidebar-header{padding:18px 20px 16px;text-align:center;border-bottom:1px solid rgba(255,255,255,.1);}
+.sidebar-header h2{font-size:16px;color:#fff;margin-bottom:4px;}.sidebar-header p{font-size:11px;color:rgba(255,255,255,.5);}
+.sidebar-logo{margin-bottom:6px;line-height:0;}
+.sidebar-logo{margin-bottom:8px;line-height:0;}
+.sidebar-logo svg{filter:drop-shadow(0 0 12px rgba(124,77,255,.4));}
+
+.sidebar nav a{display:flex;align-items:center;padding:11px 18px;color:rgba(255,255,255,.7);text-decoration:none;font-size:12.5px;border-left:3px solid transparent;transition:all .2s;cursor:pointer;}
+.sidebar nav a:hover,.sidebar nav a.active{background:var(--sidebar-hover);color:#fff;border-left-color:var(--primary-light);}
+.sidebar nav a i{width:20px;margin-right:10px;text-align:center;font-size:13px;}
+.main{margin-left:260px;flex:1;min-height:100vh;}
+.top-bar{background:#fff;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:8px;}
+.top-bar h1{font-size:18px;color:var(--primary);}
+.top-bar-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:var(--primary);color:#fff;}.btn-primary:hover{background:var(--primary-dark);}
+.content{padding:24px 28px;}
+.section{display:none;animation:fadeIn .4s;}.section.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+@keyframes slideUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+.section-title{font-size:21px;color:var(--primary);margin-bottom:5px;display:flex;align-items:center;gap:10px;}
+.section-subtitle{font-size:13px;color:var(--text-light);margin-bottom:20px;}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:22px;}
+.kpi-card{background:var(--card-bg);border-radius:10px;padding:18px;box-shadow:var(--shadow);border-left:4px solid var(--primary);transition:transform .2s;animation:slideUp .5s both;}
+.kpi-card:hover{transform:translateY(-3px);}
+.kpi-card.green{border-left-color:var(--accent-green);}.kpi-card.red{border-left-color:var(--accent-red);}
+.kpi-card.amber{border-left-color:var(--accent-amber);}.kpi-card.blue{border-left-color:var(--accent-blue);}.kpi-card.purple{border-left-color:var(--accent-purple);}
+.kpi-label{font-size:11px;color:var(--text-light);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+.kpi-value{font-size:26px;font-weight:700;color:var(--accent-blue);}
+.kpi-icon{float:right;font-size:22px;color:var(--border);margin-top:-4px;}
+.chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin-bottom:22px;}
+.chart-box{background:var(--card-bg);border-radius:10px;box-shadow:var(--shadow);padding:18px;}
+.chart-box h4{font-size:13px;color:var(--text);margin-bottom:10px;}.chart-box canvas{max-height:300px;}
+.table-container{background:var(--card-bg);border-radius:10px;box-shadow:var(--shadow);overflow-x:auto;margin-bottom:22px;}
+.table-container table{width:100%;border-collapse:collapse;min-width:600px;}
+.table-container th{background:var(--primary);color:#fff;padding:11px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;text-align:left;cursor:pointer;white-space:nowrap;}
+.table-container th:hover{background:var(--primary-dark);}
+.table-container td{padding:9px 12px;font-size:12.5px;border-bottom:1px solid var(--border);}
+.table-container tr:nth-child(even) td{background:#fafafa;}
+.table-container tr:hover td{background:#e0f0ef !important;}
+.rag{display:inline-block;padding:3px 12px;border-radius:12px;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;}
+.rag-red{background:var(--accent-red);}.rag-amber{background:var(--accent-amber);}.rag-yellow{background:#d4ac0d;}.rag-green{background:var(--accent-green);}.rag-gray{background:#95a5a6;}
+.badge{display:inline-block;padding:3px 10px;border-radius:10px;font-size:10.5px;font-weight:600;}
+.badge-green{background:#d4edda;color:#155724;}.badge-amber{background:#fff3cd;color:#856404;}
+.badge-red{background:#f8d7da;color:#721c24;}.badge-blue{background:#cce5ff;color:#004085;}.badge-gray{background:#e2e3e5;color:#383d41;}
+.filter-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.filter-bar select,.filter-bar input{padding:7px 11px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none;}
+.filter-bar select:focus,.filter-bar input:focus{border-color:var(--primary);}
+.highlight-box{background:var(--card-bg);border-radius:10px;box-shadow:var(--shadow);padding:18px;margin-bottom:14px;}
+.highlight-box h4{color:var(--primary);margin-bottom:10px;font-size:14px;}
+.highlight-box ul{list-style:none;padding:0;}
+.highlight-box ul li{padding:5px 0;font-size:12.5px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:7px;}
+.highlight-box ul li:last-child{border-bottom:none;}
+.risk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px;}
+.risk-item{background:var(--card-bg);border-radius:8px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.06);text-align:center;border-top:3px solid var(--border);}
+.risk-item .rv{font-size:24px;font-weight:700;}.risk-item .rl{font-size:11px;color:var(--text-light);text-transform:uppercase;letter-spacing:.5px;margin-top:3px;}
+.dev-card{background:var(--card-bg);border-radius:10px;box-shadow:var(--shadow);margin-bottom:14px;border-left:4px solid var(--accent-red);overflow:hidden;}
+.dev-card.high{border-left-color:var(--accent-amber);}
+.dev-head{padding:13px 18px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-weight:600;font-size:14px;gap:10px;flex-wrap:wrap;}
+.dev-head:hover{background:#f7f9fc;}
+.dev-head .dev-meta{font-size:11px;color:var(--text-light);font-weight:400;}
+.dev-body{max-height:0;overflow:hidden;transition:max-height .35s ease;padding:0 18px;}
+.dev-card.open .dev-body{max-height:700px;padding:4px 18px 16px;}
+.dev-body table{width:100%;border-collapse:collapse;}
+.dev-body td{padding:6px 8px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:top;}
+.dev-body td.k{color:var(--text-light);width:200px;font-weight:600;}
+.rec-card{background:var(--card-bg);border-radius:10px;box-shadow:var(--shadow);margin-bottom:12px;border-left:4px solid var(--primary);overflow:hidden;}
+.rec-card.quick{border-left-color:var(--accent-green);}.rec-card.medium{border-left-color:var(--accent-amber);}.rec-card.strategic{border-left-color:var(--accent-blue);}
+.rec-head{padding:14px 18px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-weight:600;font-size:14px;}
+.rec-head:hover{background:#f7f9fc;}
+.rec-body{max-height:0;overflow:hidden;transition:max-height .3s ease;padding:0 18px;font-size:12.5px;color:var(--text-light);line-height:1.6;}
+.rec-card.open .rec-body{max-height:500px;padding:0 18px 16px;}
+.data-confidence{display:inline-block;padding:4px 12px;border-radius:14px;font-size:11px;font-weight:700;}
+.footer{text-align:center;font-size:11px;color:var(--text-light);padding:18px;border-top:1px solid var(--border);margin-top:10px;}
+.mobile-toggle{display:none;background:var(--primary);color:#fff;border:none;padding:8px 12px;border-radius:6px;font-size:18px;cursor:pointer;}
+.sidebar::-webkit-scrollbar{width:6px;}.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:3px;}
+@media print{.sidebar,.top-bar,.filter-bar,.mobile-toggle{display:none !important;}.main{margin-left:0 !important;}.section{display:block !important;page-break-inside:avoid;}.dev-card .dev-body{max-height:none !important;padding:4px 18px 16px !important;}}
+@media(max-width:900px){.sidebar{transform:translateX(-100%);}.sidebar.open{transform:translateX(0);}.main{margin-left:0;}.kpi-grid{grid-template-columns:1fr 1fr;}.chart-grid{grid-template-columns:1fr;}.mobile-toggle{display:block;}}
+</style>
+</head>
+<body>
+
+<!-- ========== SIDEBAR ========== -->
+<div class="sidebar" id="sidebar">
+ <div class="sidebar-header">
+  <div class="sidebar-logo"><svg class="atlas-logo" viewBox="0 0 600 470" width="138" height="108" role="img" aria-label="Atlas"><circle cx="379" cy="380" r="3.1" fill="#aa00ff"/><circle cx="394" cy="362" r="6.2" fill="#a10eff"/><circle cx="414" cy="347" r="2.3" fill="#981dff"/><circle cx="437" cy="313" r="5.8" fill="#8f2cff"/><circle cx="442" cy="289" r="5.1" fill="#863bff"/><circle cx="450" cy="269" r="6.4" fill="#7d49ff"/><circle cx="454" cy="236" r="4.5" fill="#7052ff"/><circle cx="441" cy="213" r="6.2" fill="#625aff"/><circle cx="435" cy="188" r="4.8" fill="#5462ff"/><circle cx="427" cy="158" r="5.7" fill="#4569ff"/><circle cx="405" cy="151" r="6.5" fill="#3771ff"/><circle cx="382" cy="123" r="5.4" fill="#2978ff"/><circle cx="359" cy="112" r="2.5" fill="#288ef4"/><circle cx="333" cy="110" r="2.6" fill="#27a4e9"/><circle cx="317" cy="107" r="3.4" fill="#26badf"/><circle cx="282" cy="105" r="2.6" fill="#26badf"/><circle cx="267" cy="110" r="3.9" fill="#27a4e9"/><circle cx="239" cy="116" r="4.4" fill="#288ef4"/><circle cx="213" cy="132" r="2.9" fill="#2978ff"/><circle cx="196" cy="139" r="3.7" fill="#3771ff"/><circle cx="168" cy="169" r="3.4" fill="#4569ff"/><circle cx="163" cy="183" r="2.8" fill="#5462ff"/><circle cx="159" cy="221" r="2.9" fill="#625aff"/><circle cx="151" cy="244" r="3.0" fill="#7052ff"/><circle cx="152" cy="268" r="6.4" fill="#7d49ff"/><circle cx="149" cy="288" r="2.3" fill="#863bff"/><circle cx="167" cy="315" r="3.7" fill="#8f2cff"/><circle cx="178" cy="342" r="4.2" fill="#981dff"/><circle cx="207" cy="362" r="2.4" fill="#a10eff"/><circle cx="224" cy="379" r="5.8" fill="#aa00ff"/><circle cx="373" cy="359" r="4.0" fill="#aa00ff"/><circle cx="389" cy="335" r="4.9" fill="#9f11ff"/><circle cx="402" cy="316" r="4.5" fill="#9522ff"/><circle cx="424" cy="297" r="7.6" fill="#8b33ff"/><circle cx="428" cy="274" r="3.3" fill="#8144ff"/><circle cx="422" cy="242" r="7.5" fill="#7351ff"/><circle cx="422" cy="223" r="6.1" fill="#635aff"/><circle cx="416" cy="202" r="7.3" fill="#5263ff"/><circle cx="392" cy="174" r="6.5" fill="#416bff"/><circle cx="378" cy="153" r="6.8" fill="#3174ff"/><circle cx="356" cy="140" r="6.2" fill="#2885f8"/><circle cx="340" cy="127" r="6.1" fill="#279fec"/><circle cx="307" cy="125" r="4.7" fill="#26b9e0"/><circle cx="283" cy="132" r="7.4" fill="#26b9e0"/><circle cx="266" cy="132" r="5.3" fill="#279fec"/><circle cx="233" cy="142" r="5.2" fill="#2885f8"/><circle cx="211" cy="156" r="6.2" fill="#3174ff"/><circle cx="193" cy="175" r="4.3" fill="#416bff"/><circle cx="191" cy="197" r="6.1" fill="#5263ff"/><circle cx="180" cy="222" r="3.5" fill="#635aff"/><circle cx="173" cy="243" r="4.2" fill="#7351ff"/><circle cx="179" cy="274" r="7.0" fill="#8144ff"/><circle cx="177" cy="298" r="6.9" fill="#8b33ff"/><circle cx="200" cy="318" r="6.0" fill="#9522ff"/><circle cx="213" cy="332" r="2.8" fill="#9f11ff"/><circle cx="234" cy="358" r="6.6" fill="#aa00ff"/><circle cx="350" cy="340" r="6.8" fill="#aa00ff"/><circle cx="376" cy="320" r="7.2" fill="#9d14ff"/><circle cx="390" cy="304" r="4.2" fill="#9128ff"/><circle cx="401" cy="278" r="4.7" fill="#853dff"/><circle cx="401" cy="257" r="2.8" fill="#774fff"/><circle cx="394" cy="231" r="5.6" fill="#6359ff"/><circle cx="399" cy="207" r="7.1" fill="#5064ff"/><circle cx="373" cy="184" r="7.0" fill="#3c6eff"/><circle cx="363" cy="166" r="6.9" fill="#2879fe"/><circle cx="338" cy="156" r="3.3" fill="#2798f0"/><circle cx="312" cy="148" r="3.6" fill="#26b6e1"/><circle cx="287" cy="143" r="5.5" fill="#26b6e1"/><circle cx="266" cy="157" r="3.8" fill="#2798f0"/><circle cx="244" cy="163" r="3.1" fill="#2879fe"/><circle cx="226" cy="183" r="2.7" fill="#3c6eff"/><circle cx="211" cy="208" r="3.8" fill="#5064ff"/><circle cx="195" cy="224" r="4.5" fill="#6359ff"/><circle cx="194" cy="251" r="4.5" fill="#774fff"/><circle cx="207" cy="274" r="5.3" fill="#853dff"/><circle cx="213" cy="306" r="3.1" fill="#9128ff"/><circle cx="229" cy="322" r="4.2" fill="#9d14ff"/><circle cx="245" cy="335" r="3.1" fill="#aa00ff"/><circle cx="347" cy="320" r="5.6" fill="#aa00ff"/><circle cx="362" cy="308" r="3.3" fill="#9a19ff"/><circle cx="375" cy="281" r="5.5" fill="#8b32ff"/><circle cx="383" cy="255" r="6.0" fill="#7c4bff"/><circle cx="378" cy="238" r="4.5" fill="#6559ff"/><circle cx="369" cy="208" r="5.8" fill="#4c66ff"/><circle cx="352" cy="190" r="2.8" fill="#3473ff"/><circle cx="338" cy="180" r="2.4" fill="#288df5"/><circle cx="314" cy="172" r="3.4" fill="#26b3e3"/><circle cx="291" cy="171" r="3.9" fill="#26b3e3"/><circle cx="265" cy="183" r="4.8" fill="#288df5"/><circle cx="242" cy="193" r="5.6" fill="#3473ff"/><circle cx="234" cy="218" r="4.8" fill="#4c66ff"/><circle cx="222" cy="233" r="2.9" fill="#6559ff"/><circle cx="218" cy="254" r="3.6" fill="#7c4bff"/><circle cx="231" cy="284" r="4.1" fill="#8b32ff"/><circle cx="243" cy="302" r="5.2" fill="#9a19ff"/><circle cx="258" cy="320" r="3.4" fill="#aa00ff"/><circle cx="333" cy="297" r="3.0" fill="#aa00ff"/><circle cx="352" cy="280" r="2.1" fill="#9226ff"/><circle cx="364" cy="256" r="3.2" fill="#7b4dff"/><circle cx="351" cy="231" r="4.4" fill="#5561ff"/><circle cx="339" cy="202" r="3.0" fill="#2f75ff"/><circle cx="317" cy="191" r="4.1" fill="#27a8e8"/><circle cx="289" cy="198" r="1.9" fill="#27a8e8"/><circle cx="266" cy="206" r="4.4" fill="#2f75ff"/><circle cx="245" cy="224" r="4.2" fill="#5561ff"/><circle cx="239" cy="253" r="3.9" fill="#7b4dff"/><circle cx="244" cy="283" r="3.7" fill="#9226ff"/><circle cx="272" cy="297" r="4.4" fill="#aa00ff"/><circle cx="262" cy="111" r="1.4" fill="#27a7e8"/><circle cx="168" cy="296" r="2.3" fill="#873aff"/><circle cx="223" cy="380" r="3.9" fill="#a801ff"/><circle cx="194" cy="209" r="2.7" fill="#595fff"/><circle cx="328" cy="148" r="3.6" fill="#27a9e7"/><circle cx="263" cy="309" r="2.0" fill="#a30aff"/><circle cx="324" cy="154" r="2.8" fill="#279eec"/><circle cx="184" cy="275" r="3.2" fill="#833fff"/><circle cx="434" cy="180" r="1.5" fill="#4c65ff"/><circle cx="424" cy="163" r="3.1" fill="#4669ff"/><circle cx="278" cy="106" r="3.8" fill="#26b4e2"/><circle cx="349" cy="273" r="3.2" fill="#853cff"/><circle cx="357" cy="246" r="3.1" fill="#7a4dff"/><circle cx="236" cy="302" r="2.7" fill="#9c16ff"/><circle cx="192" cy="356" r="2.9" fill="#9e14ff"/><circle cx="386" cy="253" r="2.3" fill="#7550ff"/><text x="300" y="430" text-anchor="middle" fill="#ffffff" font-family="'Segoe UI',Arial,Helvetica,sans-serif" font-weight="300" font-size="92" letter-spacing="20">ATLAS</text></svg></div>
+  <h2>{{CLIENT}} EOL Assessment</h2>
+  <p>Hardware + OS Lifecycle &bull; {{GENERATED_TS}}</p>
+ </div>
+ <nav>
+  <a class="active" onclick="showSection('exec',this)"><i class="fas fa-gauge-high"></i>Executive Summary</a>
+  <a onclick="showSection('risk',this)"><i class="fas fa-triangle-exclamation"></i>Risk Overview</a>
+  <a onclick="showSection('inventory',this)"><i class="fas fa-server"></i>Device Inventory</a>
+  <a onclick="showSection('os',this)"><i class="fas fa-compact-disc"></i>OS &amp; Software EOL</a>
+  <a onclick="showSection('critical',this)"><i class="fas fa-fire"></i>Critical &amp; High Risk</a>
+  <a onclick="showSection('recs',this)"><i class="fas fa-clipboard-check"></i>Recommendations</a>
+  <a onclick="showSection('strategic',this)"><i class="fas fa-chess"></i>Strategic &amp; Data Quality</a>
+ </nav>
+</div>
+
+<!-- ========== MAIN ========== -->
+<div class="main">
+ <div class="top-bar">
+  <div style="display:flex;align-items:center;gap:10px;">
+   <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')"><i class="fas fa-bars"></i></button>
+   <h1><svg width="22" height="22" viewBox="0 0 600 600" style="vertical-align:-4px;margin-right:8px;"><circle cx="300" cy="130" r="34" fill="#26c6da"/><circle cx="180" cy="200" r="26" fill="#2979ff"/><circle cx="420" cy="200" r="26" fill="#2979ff"/><circle cx="140" cy="330" r="22" fill="#7c4dff"/><circle cx="460" cy="330" r="22" fill="#7c4dff"/><circle cx="200" cy="430" r="18" fill="#aa00ff"/><circle cx="400" cy="430" r="18" fill="#aa00ff"/></svg>{{CLIENT}} — EOL Infrastructure Assessment</h1>
+  </div>
+  <div class="top-bar-right">
+   <span style="font-size:12px;color:var(--text-light);">Devices: <b>{{TOTAL_DEVICES}}</b> | Generated: <b>{{GENERATED_TS}}</b></span>
+   <span class="data-confidence badge-{{CONFIDENCE_CLASS}}" title="Based on completeness of the inventory file">Data Confidence: {{CONFIDENCE_LABEL}}</span>
+   <button class="btn btn-primary" onclick="window.print()"><i class="fas fa-file-pdf"></i> Export PDF</button>
+  </div>
+ </div>
+ <div class="content">
+
+ <!-- ===== EXECUTIVE SUMMARY ===== -->
+ <div class="section active" id="exec">
+  <h2 class="section-title"><i class="fas fa-gauge-high"></i> Executive Summary</h2>
+  <p class="section-subtitle">{{CLIENT}} infrastructure EOL exposure &mdash; hardware &amp; OS dual-layer view</p>
+  <div class="kpi-grid">
+   <div class="kpi-card blue"><div class="kpi-icon"><i class="fas fa-server"></i></div><div class="kpi-label">Total Devices</div><div class="kpi-value" data-count="{{TOTAL_DEVICES}}">0</div></div>
+   <div class="kpi-card red"><div class="kpi-icon"><i class="fas fa-fire"></i></div><div class="kpi-label">Combined Critical</div><div class="kpi-value" data-count="{{COMBINED_CRITICAL}}">0</div></div>
+   <div class="kpi-card amber"><div class="kpi-icon"><i class="fas fa-microchip"></i></div><div class="kpi-label">HW Critical + High</div><div class="kpi-value" data-count="{{HW_CRIT_HIGH}}">0</div></div>
+   <div class="kpi-card purple"><div class="kpi-icon"><i class="fas fa-compact-disc"></i></div><div class="kpi-label">OS Critical + High</div><div class="kpi-value" data-count="{{OS_CRIT_HIGH}}">0</div></div>
+  </div>
+  <div class="highlight-box">
+   <h4><i class="fas fa-bolt" style="color:var(--accent-purple);"></i> Software-Driven Exposure</h4>
+   <p style="font-size:12.5px;color:var(--text-light);"><b style="color:var(--accent-red);font-size:15px;">{{OS_EXCEEDS_HW}}</b> device(s) carry an OS/software risk that is <b>higher than</b> their hardware risk &mdash; in-support hardware running an at-risk operating system. These are easy to miss in a hardware-only refresh plan.</p>
+  </div>
+  <div class="highlight-box">
+   <h4><i class="fas fa-triangle-exclamation" style="color:var(--accent-amber);"></i> Top 3 Urgent Action Items</h4>
+   <ul>
+    <li><i class="fas fa-arrow-right" style="color:var(--primary);"></i> {{ACTION_1}}</li>
+    <li><i class="fas fa-arrow-right" style="color:var(--primary);"></i> {{ACTION_2}}</li>
+    <li><i class="fas fa-arrow-right" style="color:var(--primary);"></i> {{ACTION_3}}</li>
+   </ul>
+  </div>
+ </div>
+
+ <!-- ===== RISK OVERVIEW ===== -->
+ <div class="section" id="risk">
+  <h2 class="section-title"><i class="fas fa-triangle-exclamation"></i> Risk Overview</h2>
+  <p class="section-subtitle">Combined risk distribution and hardware-vs-OS comparison</p>
+  <div class="risk-grid">
+   <div class="risk-item" style="border-top-color:var(--accent-red);"><div class="rv" style="color:var(--accent-red);">{{COMBINED_CRITICAL}}</div><div class="rl">Critical</div></div>
+   <div class="risk-item" style="border-top-color:var(--accent-amber);"><div class="rv" style="color:var(--accent-amber);">{{COMBINED_HIGH}}</div><div class="rl">High</div></div>
+   <div class="risk-item" style="border-top-color:#d4ac0d;"><div class="rv" style="color:#d4ac0d;">{{COMBINED_MEDIUM}}</div><div class="rl">Medium</div></div>
+   <div class="risk-item" style="border-top-color:var(--accent-green);"><div class="rv" style="color:var(--accent-green);">{{COMBINED_LOW}}</div><div class="rl">Low</div></div>
+   <div class="risk-item" style="border-top-color:#95a5a6;"><div class="rv" style="color:#95a5a6;">{{COMBINED_UNKNOWN}}</div><div class="rl">Unknown</div></div>
+  </div>
+  <div class="chart-grid">
+   <div class="chart-box"><h4>Combined Risk Distribution</h4><canvas id="combinedDonut"></canvas></div>
+   <div class="chart-box"><h4>Hardware vs OS Risk</h4><canvas id="hwosBar"></canvas></div>
+  </div>
+  <div class="chart-box"><h4>Devices by Category</h4><canvas id="catBar"></canvas></div>
+ </div>
+
+ <!-- ===== DEVICE INVENTORY ===== -->
+ <div class="section" id="inventory">
+  <h2 class="section-title"><i class="fas fa-server"></i> Device Inventory</h2>
+  <p class="section-subtitle">Every device with hardware &amp; OS EOL status &mdash; filter and search</p>
+  <div class="filter-bar">
+   <input id="invSearch" placeholder="Search hostname / vendor / model / OS…" oninput="filterInv()">
+   <select id="invRisk" onchange="filterInv()">
+    <option value="">All Combined Risk</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option><option>Unknown</option>
+   </select>
+   <select id="invCat" onchange="filterInv()"><option value="">All Categories</option>{{CATEGORY_OPTIONS}}</select>
+  </div>
+  <div class="table-container"><table id="invTable">
+   <thead><tr><th>#</th><th>Hostname</th><th>Category</th><th>Vendor</th><th>Model</th><th>HW EoS/LDoS</th><th>HW Risk</th><th>OS / NOS</th><th>OS Version</th><th>OS EoS</th><th>OS Risk</th><th>Combined</th></tr></thead>
+   <tbody><!-- {{INVENTORY_ROWS}} one <tr> per device. Use data-cat / data-risk attrs for filtering.
+    e.g. <tr data-cat="Servers" data-risk="Critical"><td>1</td><td>SRV-DC01</td><td>Servers</td><td>HPE</td><td>ProLiant DL380 Gen9</td><td>2024-10</td><td><span class="rag rag-red">Critical</span></td><td>Windows Server</td><td>2012 R2</td><td>2023-10</td><td><span class="rag rag-red">Critical</span></td><td><span class="rag rag-red">Critical</span></td></tr> --></tbody>
+  </table></div>
+ </div>
+
+ <!-- ===== OS & SOFTWARE EOL ===== -->
+ <div class="section" id="os">
+  <h2 class="section-title"><i class="fas fa-compact-disc"></i> OS &amp; Software EOL Summary</h2>
+  <p class="section-subtitle">Grouped by platform &amp; version &mdash; surfaces upgrade-wave consolidation opportunities</p>
+  <div class="chart-box" style="margin-bottom:18px;"><h4>Devices by OS Platform &amp; Status</h4><canvas id="osBar"></canvas></div>
+  <div class="table-container"><table id="osTable">
+   <thead><tr><th>OS Platform</th><th>Version</th><th>Devices Affected</th><th>Mainstream End</th><th>Extended / ESU End</th><th>Status</th><th>OS Risk</th></tr></thead>
+   <tbody><!-- {{OS_ROWS}}
+    e.g. <tr><td>Windows Server</td><td>2012 R2</td><td>14</td><td>2018-10-09</td><td>2023-10-10</td><td><span class="badge badge-red">Unsupported</span></td><td><span class="rag rag-red">Critical</span></td></tr> --></tbody>
+  </table></div>
+ </div>
+
+ <!-- ===== CRITICAL & HIGH ===== -->
+ <div class="section" id="critical">
+  <h2 class="section-title"><i class="fas fa-fire"></i> Critical &amp; High Risk &mdash; Immediate Action</h2>
+  <p class="section-subtitle">Click a device to expand full EOL status, replacement &amp; upgrade path</p>
+  <!-- {{CRITICAL_CARDS}} repeat; class "dev-card" (critical) or "dev-card high".
+  <div class="dev-card"><div class="dev-head" onclick="this.parentElement.classList.toggle('open')">
+    <span><i class="fas fa-fire" style="color:var(--accent-red);"></i> SRV-DC01 <span class="dev-meta">&mdash; HPE ProLiant DL380 Gen9</span></span>
+    <span><span class="rag rag-red">Critical</span> <i class="fas fa-chevron-down"></i></span></div>
+   <div class="dev-body"><table>
+    <tr><td class="k">HW EOL Status</td><td>Past LDoS as of 2024-10</td></tr>
+    <tr><td class="k">HW Risk</td><td><span class="rag rag-red">Critical</span></td></tr>
+    <tr><td class="k">OS / NOS</td><td>Windows Server 2012 R2</td></tr>
+    <tr><td class="k">OS EOL Status</td><td>EOL since 2023-10, no ESU available</td></tr>
+    <tr><td class="k">OS Risk</td><td><span class="rag rag-red">Critical</span></td></tr>
+    <tr><td class="k">Recommended HW Replacement</td><td>HPE ProLiant DL380 Gen11 — current gen, Gen5 PCIe</td></tr>
+    <tr><td class="k">Recommended OS Upgrade Path</td><td>Fresh deploy Windows Server 2022 (no supported in-place from 2012 R2)</td></tr>
+    <tr><td class="k">Alternative Option</td><td>Dell PowerEdge R760</td></tr>
+    <tr><td class="k">Migration Notes</td><td>App compatibility test for legacy .NET; plan downtime window</td></tr>
+    <tr><td class="k">Urgency</td><td><span class="badge badge-red">Immediate</span></td></tr>
+   </table></div></div>
+  -->
+ </div>
+
+ <!-- ===== RECOMMENDATIONS ===== -->
+ <div class="section" id="recs">
+  <h2 class="section-title"><i class="fas fa-clipboard-check"></i> Full Recommendations</h2>
+  <p class="section-subtitle">Hardware replacement &amp; OS upgrade path for every at-risk device</p>
+  <div class="filter-bar"><input id="recSearch" placeholder="Search recommendations…" oninput="filterRecs()"></div>
+  <div class="table-container"><table id="recTable">
+   <thead><tr><th>Hostname</th><th>Current Model</th><th>HW Risk</th><th>OS / Version</th><th>OS Risk</th><th>Combined</th><th>HW Replacement</th><th>OS Upgrade Path</th><th>Urgency</th></tr></thead>
+   <tbody><!-- {{REC_ROWS}}
+    e.g. <tr><td>SRV-DC01</td><td>DL380 Gen9</td><td><span class="rag rag-red">Critical</span></td><td>WS 2012 R2</td><td><span class="rag rag-red">Critical</span></td><td><span class="rag rag-red">Critical</span></td><td>DL380 Gen11</td><td>Fresh deploy WS 2022</td><td><span class="badge badge-red">Immediate</span></td></tr> --></tbody>
+  </table></div>
+ </div>
+
+ <!-- ===== STRATEGIC & DATA QUALITY ===== -->
+ <div class="section" id="strategic">
+  <h2 class="section-title"><i class="fas fa-chess"></i> Strategic Recommendations</h2>
+  <p class="section-subtitle">Broader infrastructure observations &mdash; click to expand</p>
+  <!-- {{STRATEGIC_CARDS}} classes: quick | medium | strategic
+  <div class="rec-card strategic"><div class="rec-head" onclick="this.parentElement.classList.toggle('open')"><span><i class="fas fa-layer-group"></i> Consolidate the Windows Server 2012 R2 estate in one upgrade wave</span><i class="fas fa-chevron-down"></i></div><div class="rec-body">14 servers share the same EOL OS — batch them into a single 2022 migration project to cut per-server overhead…</div></div>
+  -->
+  <h2 class="section-title" style="margin-top:24px;"><i class="fas fa-triangle-exclamation"></i> Data Quality Notes</h2>
+  <p class="section-subtitle">Assumptions, unconfirmed EOL dates, and missing fields</p>
+  <div class="highlight-box">
+   <ul>
+    <!-- {{DATA_QUALITY_ROWS}} e.g. <li><i class="fas fa-circle-info" style="color:var(--accent-amber);"></i> 3 devices missing Model — device type inferred from hostname pattern</li> -->
+   </ul>
+  </div>
+  <div class="footer">
+   Generated by Atlas EOL Device Checker &bull; {{CLIENT}} &bull; {{GENERATED_TS}} &bull; Confidence: {{CONFIDENCE_LABEL}}<br>
+   Dual-layer risk model (Hardware EOL + OS/Software EOL, combined = worst-of-two). EOL dates from vendor lifecycle data; verify flagged items against the official vendor portal.
+  </div>
+ </div>
+
+ </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+// ===== Navigation =====
+function showSection(id, el){
+ document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.remove('active'));
+ if(el) el.classList.add('active');
+ document.getElementById('sidebar').classList.remove('open');
+}
+function filterInv(){
+ const q=(document.getElementById('invSearch').value||'').toLowerCase();
+ const risk=document.getElementById('invRisk').value;
+ const cat=document.getElementById('invCat').value;
+ document.querySelectorAll('#invTable tbody tr').forEach(r=>{
+  const okText=r.textContent.toLowerCase().includes(q);
+  const okRisk=!risk||r.getAttribute('data-risk')===risk;
+  const okCat=!cat||r.getAttribute('data-cat')===cat;
+  r.style.display=(okText&&okRisk&&okCat)?'':'none';
+ });
+}
+function filterRecs(){
+ const q=(document.getElementById('recSearch').value||'').toLowerCase();
+ document.querySelectorAll('#recTable tbody tr').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(q)?'':'none';});
+}
+// ===== Animated KPI counters =====
+function animateCounters(){
+ document.querySelectorAll('.kpi-value[data-count]').forEach(el=>{
+  const target=parseFloat(el.getAttribute('data-count'))||0; let cur=0; const step=Math.max(1,target/40);
+  const t=setInterval(()=>{cur+=step;if(cur>=target){cur=target;clearInterval(t);}el.textContent=Math.round(cur).toLocaleString();},18);
+ });
+}
+// ===== Charts (Chart.js — guarded so the page still renders offline) =====
+const RISK_COLORS={Critical:'#e74c3c',High:'#f39c12',Medium:'#d4ac0d',Low:'#27ae60',Unknown:'#95a5a6'};
+const PAL=['#007272','#00b894','#0f2040','#27ae60','#e74c3c','#f39c12','#7c4dff','#0099cc'];
+function initCharts(){
+ if(typeof Chart==='undefined') return;
+ Chart.defaults.font.family="'Segoe UI',sans-serif"; Chart.defaults.color='#8898a9';
+ const mk=(id,cfg)=>{const c=document.getElementById(id);if(c) new Chart(c.getContext('2d'),cfg);};
+
+ // Combined risk donut — order: Critical, High, Medium, Low, Unknown
+ mk('combinedDonut',{type:'doughnut',data:{labels:['Critical','High','Medium','Low','Unknown'],
+   datasets:[{data:{{COMBINED_DONUT_DATA}},backgroundColor:['#e74c3c','#f39c12','#d4ac0d','#27ae60','#95a5a6'],borderColor:'#fff',borderWidth:3}]},
+   options:{cutout:'60%',plugins:{legend:{position:'bottom'}}}});
+
+ // Hardware vs OS grouped bar across risk levels
+ mk('hwosBar',{type:'bar',data:{labels:['Critical','High','Medium','Low','Unknown'],datasets:[
+   {label:'Hardware',data:{{HW_RISK_DATA}},backgroundColor:'#007272',borderRadius:5},
+   {label:'OS / Software',data:{{OS_RISK_DATA}},backgroundColor:'#7c4dff',borderRadius:5}]},
+   options:{plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}});
+
+ // Devices by category
+ mk('catBar',{type:'bar',data:{labels:{{CAT_LABELS}},datasets:[{label:'Devices',data:{{CAT_DATA}},backgroundColor:PAL,borderRadius:6}]},
+   options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}}}});
+
+ // OS platform stacked by status (Supported / ESU-only / Unsupported)
+ mk('osBar',{type:'bar',data:{labels:{{OS_PLATFORM_LABELS}},datasets:[
+   {label:'Supported',data:{{OS_SUPPORTED_DATA}},backgroundColor:'#27ae60',borderRadius:4},
+   {label:'ESU / Extended',data:{{OS_ESU_DATA}},backgroundColor:'#f39c12',borderRadius:4},
+   {label:'Unsupported',data:{{OS_UNSUPPORTED_DATA}},backgroundColor:'#e74c3c',borderRadius:4}]},
+   options:{plugins:{legend:{position:'bottom'}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}}});
+}
+document.addEventListener('DOMContentLoaded',()=>{animateCounters();initCharts();});
+</script>
+</body>
+</html>
