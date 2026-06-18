@@ -81,54 +81,80 @@ Parse files from the workspace with the **Read** tool (CSV/TXT/JSON) or the **Ba
 
 ---
 
-## ATLAS KNOWLEDGE BASE (self-maintaining EOL database)
+## ATLAS KNOWLEDGE BASE (baked into this agent, self-maintaining)
 
-Atlas maintains its **own persistent database** of hardware and OS/software lifecycle facts so it gets faster and more accurate over time and does not re-research the same platforms on every run.
+Atlas carries its EOL knowledge base **inside this agent file** — the `Canonical KB` JSON block below is the single source of truth. Because it lives in `atlas.md`, it ships with the agent over GitHub: **everyone who installs or pulls the agent automatically has the current KB**, with no side file to go missing or drift. Atlas reads it before researching anything, so it gets faster and more accurate over time and never re-researches the same platform twice.
 
-**Location & format.** A single JSON file, `atlas-eol-kb.json`, lives next to this agent definition (`${CLAUDE_PLUGIN_ROOT}/agents/Atlas/atlas-eol-kb.json`). It is seeded with curated entries and is the **first place you look**. Schema:
+**Entry schema.** Hardware keyed `VENDOR|MODEL`, OS keyed `PLATFORM|VERSION` (both upper-cased, trimmed):
+- hardware: `category`, `tier` (`eol|aging|current`), `release_year`, `end_of_sale`, `end_of_support` (`YYYY-MM` or `unknown`), `replacement`, `alternative`, `note`, `source` (vendor URL), `verified` (`YYYY-MM-DD`).
+- os: `mainstream_end`, `extended_end`, `status` (`supported|esu|unsupported|unknown`), `risk` (`Low|Medium|High|Critical|Unknown`), `note`, `source`, `verified`.
+
+**Runtime flow:**
+1. **Load the canonical KB** from the `Canonical KB` block below at the start of every run. If a local working copy `atlas-eol-kb.json` exists next to the agent, merge it in (a user's own prior enrichments persist between their runs); on conflict the entry with the newer `verified` date wins.
+2. **Lookup → search → learn** for every distinct model and OS/version: normalise the key; a KB hit within `_meta.staleness_days` → **use it, no web search**. Miss or stale → WebSearch/WebFetch the official vendor lifecycle page (see reference URLs at the end of this file) or endoflife.date, extract the dates, and add/refresh the entry with a `source` URL and today's `verified` date. Use family matching where exact models aren't published (a switch/array family shares a lifecycle) and say so in `note`. Inconclusive research → store `end_of_support: "unknown"` with a note so it isn't re-chased, and flag it in Data Quality Notes.
+3. **Persist locally** during the run to the working `atlas-eol-kb.json` (single atomic write) so the current session and the user's next run benefit immediately.
+4. **Contribute back so ALL users benefit** — whenever you add or refresh entries, also **update the `Canonical KB` JSON block in this agent file (`atlas.md`)** and tell the user to commit & push it to GitHub. Pushing `atlas.md` is what makes the new facts available to everyone on their next pull / plugin update. (Bump `_meta.version` and `_meta.updated` when you do.)
+
+**Rules:** only add or refresh entries — never delete ones you didn't add this run; store vendor/model/OS lifecycle facts **only**, never client names, hostnames, serials, or inventory; if both the block and the working file are unusable, rebuild from the schema and proceed (don't fail the run).
+
+**Canonical KB** (edit this block and push `atlas.md` to share updates):
 
 ```json
 {
-  "_meta": { "version": 1, "updated": "YYYY-MM-DD", "staleness_days": 180 },
+  "_meta": { "version": 1, "updated": "2026-06-18", "staleness_days": 180 },
   "hardware": {
-    "vendor|model": {
-      "category": "Storage Arrays",
-      "tier": "eol | aging | current",
-      "release_year": 2014,
-      "end_of_sale": "YYYY-MM | unknown",
-      "end_of_support": "YYYY-MM | unknown",
-      "replacement": "current-gen successor",
-      "alternative": "cross-vendor option",
-      "note": "one-line lifecycle context",
-      "source": "official vendor lifecycle URL",
-      "verified": "YYYY-MM-DD"
-    }
+    "DELL EMC|VMAX 100K": { "category": "Storage Arrays", "tier": "eol", "release_year": 2014, "end_of_sale": "2016", "end_of_support": "unknown", "replacement": "Dell PowerMax 2500", "alternative": "Pure //X, HPE Alletra MP", "note": "VMAX3 (2014); past Dell primary support; HYPERMAX OS frozen — verify LDoS", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "DELL EMC|POWERMAX 2500": { "category": "Storage Arrays", "tier": "current", "release_year": 2022, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "—", "alternative": "—", "note": "Current Dell flagship (PowerMaxOS 10); full support", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "DELL EMC|UNITY XT 480": { "category": "Storage Arrays", "tier": "aging", "release_year": 2019, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "Dell PowerStore 1200T/3200T", "alternative": "Pure //X20, HPE Alletra 6000", "note": "Unity XT (2019); end-of-sale approaching as PowerStore takes midrange — verify LDoS", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "DELL EMC|UNITY XT 680": { "category": "Storage Arrays", "tier": "aging", "release_year": 2019, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "Dell PowerStore 3200T/5200T", "alternative": "Pure //X50, HPE Alletra 9000", "note": "Unity XT (2019); midrange superseded by PowerStore — verify LDoS", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "DELL EMC|UNITY 380": { "category": "Storage Arrays", "tier": "aging", "release_year": 2019, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "Dell PowerStore 500T/1200T", "alternative": "Pure //X20, HPE Alletra 6000", "note": "Unity XT entry (2019); supported on contract, plan PowerStore refresh", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "DELL EMC|POWERSTORE 500": { "category": "Storage Arrays", "tier": "current", "release_year": 2020, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "—", "alternative": "—", "note": "PowerStore 500T (Gen1); supported, monitor for Gen2 refresh", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "DELL EMC|POWERSTORE 1200T": { "category": "Storage Arrays", "tier": "current", "release_year": 2024, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "—", "alternative": "—", "note": "PowerStore Gen2 (2024); full support", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "DELL EMC|POWERSTORE 3200T": { "category": "Storage Arrays", "tier": "current", "release_year": 2024, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "—", "alternative": "—", "note": "PowerStore Gen2 (2024); full support", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "DELL EMC|POWERSTORE 5200T": { "category": "Storage Arrays", "tier": "current", "release_year": 2024, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "—", "alternative": "—", "note": "PowerStore Gen2 (2024); full support", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "DELL EMC|ECS": { "category": "Object Storage", "tier": "aging", "release_year": 0, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "Dell ECS EX-series / ObjectScale", "alternative": "Scality, MinIO", "note": "ECS object platform; confirm node generation (EX300/EX500) and LDoS", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "BROCADE|6510": { "category": "SAN / FC Switches", "tier": "eol", "release_year": 2011, "end_of_sale": "2019", "end_of_support": "unknown", "replacement": "Brocade G720 (Gen7 64G)", "alternative": "Cisco MDS 9148V", "note": "Brocade 6510 16G FC (Condor3); past EoS — cannot run FOS 9.x", "source": "https://www.broadcom.com/support/fibre-channel-networking", "verified": "2026-06-18" },
+    "BROCADE|7720": { "category": "SAN / FC Switches", "tier": "aging", "release_year": 0, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "Connectrix MX / Brocade Gen7", "alternative": "Cisco MDS 9000", "note": "Connectrix-class FC switch — confirm exact model & FOS LDoS via Dell/Broadcom", "source": "https://www.broadcom.com/support/fibre-channel-networking", "verified": "2026-06-18" },
+    "DELL EMC|DS-6630R": { "category": "SAN / FC Switches", "tier": "aging", "release_year": 0, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "Dell Connectrix Gen7 director/switch", "alternative": "Cisco MDS 9700", "note": "Dell Connectrix-class FC switch; confirm exact model & FOS LDoS", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "DELL EMC|RECOVERPOINT GEN 6": { "category": "Replication Appliances", "tier": "aging", "release_year": 0, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "RecoverPoint for VMs / native array replication", "alternative": "Zerto, Dell PowerProtect", "note": "RecoverPoint classic Gen6 appliance; roadmap winding down — plan migration", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "DELL EMC|ISILON X410": { "category": "Storage Arrays", "tier": "eol", "release_year": 2014, "end_of_sale": "2018", "end_of_support": "unknown", "replacement": "Dell PowerScale F210/F710", "alternative": "Qumulo, NetApp AFF", "note": "Isilon X410 (Gen5); past EoS — OneFS capped on old hardware", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "DELL EMC|ISILON H700": { "category": "Storage Arrays", "tier": "current", "release_year": 2020, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "—", "alternative": "—", "note": "PowerScale H700; in support", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "DELL EMC|ISILON A300": { "category": "Storage Arrays", "tier": "current", "release_year": 2020, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "—", "alternative": "—", "note": "PowerScale A300 archive; in support", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "HITACHI|AMS2500": { "category": "Storage Arrays", "tier": "eol", "release_year": 2008, "end_of_sale": "2012", "end_of_support": "unknown", "replacement": "Hitachi VSP E-series / Dell PowerStore", "alternative": "Pure, NetApp", "note": "Hitachi AMS 2500 (2008); long past EoSL — replace urgently", "source": "https://www.hitachivantara.com/en-us/support", "verified": "2026-06-18" },
+    "HITACHI|HUS130": { "category": "Storage Arrays", "tier": "eol", "release_year": 2012, "end_of_sale": "2017", "end_of_support": "unknown", "replacement": "Hitachi VSP E590 / Dell PowerStore", "alternative": "Pure, NetApp", "note": "Hitachi HUS 130 (2012); past EoSL — replace urgently", "source": "https://www.hitachivantara.com/en-us/support", "verified": "2026-06-18" },
+    "NETAPP|AFF-A300": { "category": "Storage Arrays", "tier": "aging", "release_year": 2017, "end_of_sale": "2021", "end_of_support": "unknown", "replacement": "NetApp AFF A400 / A70", "alternative": "Dell PowerStore, Pure //X", "note": "NetApp AFF A300 (2017); end-of-sale passed — plan controller refresh", "source": "https://mysupport.netapp.com/info/eoa/index.html", "verified": "2026-06-18" },
+    "DELL EMC|VXFLEX 1000": { "category": "Storage Arrays", "tier": "aging", "release_year": 0, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "Dell PowerFlex (current nodes)", "alternative": "Ceph, VMware vSAN", "note": "VxFlex/VxRack ScaleIO (SDS, legacy branding) — confirm node gen & PowerFlex OS", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "HPE|MSA 2040": { "category": "Storage Arrays", "tier": "eol", "release_year": 2014, "end_of_sale": "2017", "end_of_support": "2022", "replacement": "HPE MSA 2070 (Gen6)", "alternative": "Dell ME5, Pure //X", "note": "HPE MSA 2040 (2014); past EoSL — firmware frozen", "source": "https://support.hpe.com", "verified": "2026-06-18" },
+    "HPE|MSA 2050": { "category": "Storage Arrays", "tier": "eol", "release_year": 2017, "end_of_sale": "2020", "end_of_support": "unknown", "replacement": "HPE MSA 2070 (Gen6)", "alternative": "Dell ME5, Pure //X", "note": "HPE MSA 2050 (2017); end-of-support reached — replace", "source": "https://support.hpe.com", "verified": "2026-06-18" },
+    "HPE|MSA 2060": { "category": "Storage Arrays", "tier": "aging", "release_year": 2020, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "HPE MSA 2070 / 2062 (Gen6)", "alternative": "Dell ME5", "note": "HPE MSA 2060 (2020); supported but verify contract — renew or refresh", "source": "https://support.hpe.com", "verified": "2026-06-18" },
+    "HPE|ALLETRA 6000": { "category": "Storage Arrays", "tier": "current", "release_year": 2021, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "—", "alternative": "—", "note": "HPE Alletra 6000 (Nimble successor); full support", "source": "https://support.hpe.com", "verified": "2026-06-18" },
+    "PURE STORAGE|FA-X20R4": { "category": "Storage Arrays", "tier": "current", "release_year": 2023, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "—", "alternative": "—", "note": "Pure FlashArray //X20 R4 (current gen); Evergreen support", "source": "https://support.purestorage.com", "verified": "2026-06-18" },
+    "PURE STORAGE|FA-X10R3": { "category": "Storage Arrays", "tier": "current", "release_year": 2020, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "—", "alternative": "—", "note": "Pure FlashArray //X10 R3; supported (Evergreen) — track R-gen refresh", "source": "https://support.purestorage.com", "verified": "2026-06-18" },
+    "PURE STORAGE|FA-X20R3": { "category": "Storage Arrays", "tier": "current", "release_year": 2020, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "—", "alternative": "—", "note": "Pure FlashArray //X20 R3; supported (Evergreen) — track R-gen refresh", "source": "https://support.purestorage.com", "verified": "2026-06-18" },
+    "DELL EMC|ME5084": { "category": "Storage Arrays", "tier": "current", "release_year": 2022, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "—", "alternative": "—", "note": "Dell PowerVault ME5084 (2022); full support", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "EMC|VNXE3200": { "category": "Storage Arrays", "tier": "eol", "release_year": 2014, "end_of_sale": "2017", "end_of_support": "2022", "replacement": "Dell PowerStore 500T / ME5", "alternative": "Pure //X, HPE Alletra", "note": "EMC VNXe3200 (2014); past Dell EoSL — often on third-party (Park Place) support", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "KEMP|LOADMASTER": { "category": "Load Balancers", "tier": "current", "release_year": 0, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "—", "alternative": "F5, Citrix ADC", "note": "Progress KEMP LoadMaster; LMOS current — refresh per HW generation", "source": "https://kemptechnologies.com/", "verified": "2026-06-18" },
+    "DELL EMC|SCG": { "category": "Mgmt / Support Gateway", "tier": "current", "release_year": 0, "end_of_sale": "unknown", "end_of_support": "unknown", "replacement": "—", "alternative": "—", "note": "Dell Secure Connect Gateway (remote-support VM/appliance); keep on current release", "source": "https://www.dell.com/support", "verified": "2026-06-18" }
   },
   "os": {
-    "platform|version": {
-      "mainstream_end": "YYYY-MM | unknown",
-      "extended_end": "YYYY-MM | unknown",
-      "status": "supported | esu | unsupported | unknown",
-      "risk": "Low | Medium | High | Critical | Unknown",
-      "note": "…", "source": "URL", "verified": "YYYY-MM-DD"
-    }
+    "DELL UNITY OE|5.5": { "mainstream_end": "unknown", "extended_end": "unknown", "status": "supported", "risk": "Low", "note": "Unity OE 5.5.x current release line", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "DELL POWERSTOREOS|4.3": { "mainstream_end": "unknown", "extended_end": "unknown", "status": "supported", "risk": "Low", "note": "PowerStoreOS 4.x current", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "BROCADE FOS|9.2": { "mainstream_end": "unknown", "extended_end": "unknown", "status": "supported", "risk": "Low", "note": "FOS 9.x current (Gen6/Gen7)", "source": "https://www.broadcom.com/support/fibre-channel-networking", "verified": "2026-06-18" },
+    "BROCADE FOS|8.2": { "mainstream_end": "unknown", "extended_end": "nearing", "status": "esu", "risk": "Medium", "note": "FOS 8.2.x mature; 16G platforms capped here, cannot move to 9.x", "source": "https://www.broadcom.com/support/fibre-channel-networking", "verified": "2026-06-18" },
+    "PURE PURITY//FA|6.9": { "mainstream_end": "unknown", "extended_end": "unknown", "status": "supported", "risk": "Low", "note": "Purity 6.9.x current", "source": "https://support.purestorage.com", "verified": "2026-06-18" },
+    "EMC VNXE OE|3.1": { "mainstream_end": "ended", "extended_end": "none", "status": "unsupported", "risk": "High", "note": "VNXe OE 3.x frozen; platform EOL", "source": "https://www.dell.com/support", "verified": "2026-06-18" },
+    "HPE ALLETRA OS (NIMBLEOS)|6.1": { "mainstream_end": "unknown", "extended_end": "unknown", "status": "supported", "risk": "Low", "note": "Alletra OS / NimbleOS 6.1 current", "source": "https://support.hpe.com", "verified": "2026-06-18" },
+    "MICROSOFT WINDOWS SERVER|2012 R2": { "mainstream_end": "2018-10-09", "extended_end": "2023-10-10", "status": "unsupported", "risk": "Critical", "note": "EOL; ESU was paid-only and ended for most — verify Azure ESU", "source": "https://learn.microsoft.com/en-us/lifecycle/products/", "verified": "2026-06-18" },
+    "MICROSOFT WINDOWS SERVER|2016": { "mainstream_end": "2022-01-11", "extended_end": "2027-01-12", "status": "esu", "risk": "Medium", "note": "Mainstream ended; extended support to 2027-01", "source": "https://learn.microsoft.com/en-us/lifecycle/products/", "verified": "2026-06-18" },
+    "MICROSOFT WINDOWS SERVER|2019": { "mainstream_end": "2024-01-09", "extended_end": "2029-01-09", "status": "supported", "risk": "Low", "note": "Extended support to 2029-01", "source": "https://learn.microsoft.com/en-us/lifecycle/products/", "verified": "2026-06-18" },
+    "MICROSOFT WINDOWS SERVER|2022": { "mainstream_end": "2026-10-13", "extended_end": "2031-10-14", "status": "supported", "risk": "Low", "note": "Current LTSC; extended to 2031-10", "source": "https://learn.microsoft.com/en-us/lifecycle/products/", "verified": "2026-06-18" },
+    "VMWARE ESXI|7.0": { "mainstream_end": "2025-04-02", "extended_end": "2027-04-02", "status": "esu", "risk": "Medium", "note": "ESXi 7.x general support ended 2025-04; extended/technical guidance window", "source": "https://lifecycle.vmware.com/", "verified": "2026-06-18" },
+    "VMWARE ESXI|8.0": { "mainstream_end": "2027-10-11", "extended_end": "2029-10-11", "status": "supported", "risk": "Low", "note": "ESXi 8.x current", "source": "https://lifecycle.vmware.com/", "verified": "2026-06-18" }
   }
 }
 ```
 
-**Lookup → search → learn loop (run for every distinct model and every distinct OS/version):**
-1. **Read the KB first.** Normalise a key — `vendor|model` (hardware) or `platform|version` (OS), upper-cased, trimmed. If a matching entry exists and its `verified` date is within `staleness_days`, **use it** — no web search needed.
-2. **On a miss or a stale entry, research it.** Use WebSearch/WebFetch against the official vendor lifecycle page (see the reference URLs at the end of this file) or endoflife.date. Extract the EoSale / End-of-Support / mainstream / extended dates.
-3. **Write it back.** Add or update the entry with the dates, a `source` URL, and today's date in `verified`. Use fuzzy/family matching where exact models aren't published (e.g. a switch family shares a lifecycle) and say so in `note`.
-4. **If research is inconclusive,** store the entry with `"end_of_support": "unknown"` and a `note` that manual verification is needed — so the next run knows it was already attempted — and flag it in the report's Data Quality Notes.
-
-**Persistence rules.**
-- Load the KB once at the start of a run; keep an in-memory copy; **write the updated KB back to disk once at the end** (single atomic write) so a run enriches the database for next time.
-- Never delete entries you didn't add this run; only add or refresh.
-- Treat the KB as lifecycle reference data only — **never store client names, hostnames, serials, or any customer inventory in it.** It holds vendor/model/OS facts exclusively.
-- If the KB file is missing or unreadable, create a fresh one from the schema above and proceed (don't fail the run).
-
-The curated platform tables elsewhere in this file are the **seed** of this KB; prefer the KB at runtime and let it grow.
+The curated platform tables elsewhere in this file remain a fallback; prefer the Canonical KB above at runtime and grow it.
 
 ---
 

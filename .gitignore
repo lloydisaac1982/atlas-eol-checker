@@ -1,24 +1,3 @@
-# Generated assessment dashboards (client-specific output — do not commit)
-atlas-eol-*.html
-*-eol-assessment.html
-
-# Client inventory inputs (keep confidential device data out of the repo)
-*.csv
-*.xlsx
-*.xls
-inventory*.json
-devices*.json
-
-# OS / editor cruft
-.DS_Store
-Thumbs.db
-desktop.ini
-*.swp
-.vscode/
-.idea/
-
-# Python
-__pycache__/
-*.pyc
-.venv/
-venv/
+# Atlas runtime working copy of the KB (canonical KB is embedded in agents/Atlas/atlas.md)
+plugins/atlas-eol-checker/agents/Atlas/atlas-eol-kb.json
+**/atlas-eol-kb.json
