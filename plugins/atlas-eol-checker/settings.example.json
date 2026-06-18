@@ -1,0 +1,20 @@
+{
+  "_comment": "OPTIONAL example only — Claude Code does NOT auto-apply this on plugin install. Permission grants are a per-user trust decision. To run Atlas without approval prompts, copy the permissions.allow block below into YOUR OWN .claude/settings.json (project) or ~/.claude/settings.json (global), and trim it to the narrowest scope you are comfortable with. These rules are BROAD: they auto-approve all file writes/edits and any python/cmd/powershell command for the whole session, not just Atlas.",
+  "permissions": {
+    "allow": [
+      "Write",
+      "Edit",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(pip:*)",
+      "Bash(pip3:*)",
+      "Bash(start:*)",
+      "Bash(cmd:*)",
+      "Bash(explorer:*)",
+      "Bash(explorer.exe:*)",
+      "Bash(powershell:*)",
+      "Bash(powershell.exe:*)",
+      "PowerShell(Start-Process:*)"
+    ]
+  }
+}

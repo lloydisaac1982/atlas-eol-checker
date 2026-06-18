@@ -48,6 +48,18 @@ This is a Claude Code subagent with a matching slash command. To use it:
    valuable because they drive the software-layer risk independently of hardware.
 4. After the text report, Atlas **always** generates the interactive HTML dashboard automatically.
 
+## Running without approval prompts (optional)
+
+Atlas writes the dashboard + KB and runs Python to parse spreadsheets, so by default Claude Code
+asks permission for those steps. To let it run end-to-end without prompts, copy the
+`permissions.allow` block from [`plugins/atlas-eol-checker/settings.example.json`](plugins/atlas-eol-checker/settings.example.json)
+into **your own** `.claude/settings.json` (project) or `~/.claude/settings.json` (global).
+
+> ⚠️ This is **opt-in and per-user** — Claude Code never auto-applies it on install, because
+> pre-authorizing tools is a trust decision only you should make. The example is deliberately
+> broad (it auto-approves all writes/edits and any `python`/`cmd`/`powershell` command for the
+> whole session, not just Atlas). **Trim it to the narrowest scope you're comfortable with.**
+
 ## Risk model
 
 | Risk | Hardware criteria | OS criteria |
