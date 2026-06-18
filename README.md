@@ -21,10 +21,12 @@ scores **Hardware**, **OS**, and a **Combined** risk (worst-of-the-two) for ever
 ## Repository contents
 
 ```
-.claude/agents/
+.claude/agents/Atlas/
   atlas.md                       # the agent definition + system prompt
   atlas-dashboard-template.html  # canonical dashboard template (logo embedded inline)
   atlas-logo.svg                 # standalone Atlas logo (design reference)
+.claude/commands/
+  atlas.md                       # /atlas slash command (interactive onboarding)
 ```
 
 The dashboard template is fully self-contained — the Atlas logo is embedded inline as SVG, so no
@@ -33,16 +35,18 @@ CDN, and the page degrades gracefully offline (charts simply don't render).
 
 ## Install / use
 
-This is a Claude Code subagent. To use it:
+This is a Claude Code subagent with a matching slash command. To use it:
 
-1. Copy the `.claude/agents/` folder into your Claude Code workspace (or clone this repo and work
-   from inside it).
-2. Atlas registers automatically. Invoke it by asking, e.g. *"Use the atlas agent to assess this
-   inventory,"* or let Claude Code auto-select it when your request matches an EOL assessment.
+1. Copy the `.claude/` folder into your Claude Code workspace (or clone this repo and work
+   from inside it). This brings both the `agents/Atlas/` definition and the `commands/atlas.md`
+   slash command.
+2. Atlas registers automatically. Start it with the **`/atlas`** slash command, by asking
+   *"Use the atlas agent to assess this inventory,"* or let Claude Code auto-select it when your
+   request matches an EOL assessment.
 3. Atlas runs a short onboarding — it asks for the **client/organization name**, then the **device
    inventory file** (`.csv`, `.xlsx`/`.xls`, `.txt`, or `.json`). OS/version fields are especially
    valuable because they drive the software-layer risk independently of hardware.
-4. After the text report, Atlas offers to generate the interactive HTML dashboard.
+4. After the text report, Atlas **always** generates the interactive HTML dashboard automatically.
 
 ## Risk model
 
