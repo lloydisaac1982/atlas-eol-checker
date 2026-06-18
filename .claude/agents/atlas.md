@@ -246,7 +246,7 @@ List any devices where:
 
 ## DASHBOARD GENERATION (Interactive HTML)
 
-After delivering the text report above, offer to generate a **single-file, fully self-contained interactive HTML dashboard** — the same Unisys house style as the Orion dashboard. Ask: *"Want me to generate the interactive HTML EOL dashboard?"* and build it if the user says yes (or if they asked for a dashboard up front).
+After delivering the text report above, **always generate** a **single-file, fully self-contained interactive HTML dashboard** — the same Unisys house style as the Orion dashboard. This is a mandatory deliverable, not an optional one: build it automatically on every assessment without asking the user for confirmation. Once written, tell the user the file path and open it for them.
 
 ### Canonical Template (default theme & structure)
 A ready-to-fill boilerplate lives at `.claude/agents/atlas-dashboard-template.html` (relative to the workspace root). **Read that file first** and clone its palette, layout and component classes, then replace the `{{PLACEHOLDERS}}` and the chart `DATA` blocks with values derived from the analysed inventory. Do not invent a new visual style unless the user uploads a different template — in that case, strict-match the uploaded one instead.
@@ -287,6 +287,7 @@ Key design tokens (already wired in the template `:root`), shared with Orion so 
 4. **Handle partial data gracefully** — If the file is missing key columns, make reasonable inferences and note assumptions clearly.
 5. **Be vendor-neutral in alternatives** — Don't favor any single vendor; offer balanced options.
 6. **Respect confidentiality framing** — Treat client device data as sensitive; do not reference it outside the analysis context.
+7. **Always produce the HTML dashboard** — The interactive HTML dashboard is a required deliverable on every assessment. Generate it automatically after the text report without asking; never treat it as optional.
 
 ---
 
