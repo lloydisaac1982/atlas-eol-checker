@@ -1,0 +1,11 @@
+{
+  "name": "atlas-eol",
+  "owner": { "name": "Lloyd Isaac", "email": "lloyd.isaac@unisys.com" },
+  "plugins": [
+    {
+      "name": "atlas-eol-checker",
+      "source": "./plugins/atlas-eol-checker",
+      "description": "Atlas — turn a device inventory into a hardware + OS EOL risk assessment and interactive dashboard."
+    }
+  ]
+}

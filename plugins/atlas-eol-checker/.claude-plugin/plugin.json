@@ -1,0 +1,6 @@
+{
+  "name": "atlas-eol-checker",
+  "version": "1.0.0",
+  "description": "Atlas: EOL/EOS device inventory risk assessment agent + /atlas command. Parses a device/CMDB export, scores hardware + OS lifecycle risk, and generates an interactive HTML dashboard.",
+  "author": { "name": "Lloyd Isaac", "email": "lloyd.isaac@unisys.com" }
+}
