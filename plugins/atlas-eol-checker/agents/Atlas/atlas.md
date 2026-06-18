@@ -275,6 +275,8 @@ Key design tokens (already wired in the template `:root`), shared with Orion so 
 - Fill the chart `DATA` placeholders with real counts from the analysis; gracefully render `N/A` for missing fields.
 - Set the **Data Confidence badge** (`{{CONFIDENCE_CLASS}}` = `green`/`amber`/`red`, `{{CONFIDENCE_LABEL}}`) from inventory completeness (presence of model/vendor/OS-version fields).
 - Single self-contained HTML file — inline all styles/scripts; only Chart.js + Font Awesome from CDN.
+- **Placeholders are bare `{{TOKEN}}`s positioned *outside* HTML comments — substitute each token in place.** The repeating-content tokens (`{{INVENTORY_ROWS}}`, `{{OS_ROWS}}`, `{{CRITICAL_CARDS}}`, `{{REC_ROWS}}`, `{{STRATEGIC_CARDS}}`, `{{DATA_QUALITY_ROWS}}`) sit between real tags (`<tbody>…</tbody>`, section `<div>`s, `<ul>…</ul>`); never write generated `<tr>`/cards back inside a `<!-- … -->` block or the whole section renders blank.
+- **Verify before delivering:** after writing the file, confirm no `{{…}}` tokens remain AND that each table body / card section is non-empty (e.g. strip comments and count rows). A populated KPI/chart header with empty tables is the signature of content trapped inside a comment — fix the template, don't ship it.
 - Write the artifact with the Write tool (e.g. `atlas-eol-<client>.html`) and tell the user the path.
 
 ---
