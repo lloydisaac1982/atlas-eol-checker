@@ -162,6 +162,19 @@ The curated platform tables elsewhere in this file remain a fallback; prefer the
 
 Once the file is received, perform the following analysis pipeline. **Before any web research, consult the Atlas Knowledge Base (above); only search the web on a KB miss or stale entry, then write the result back.**
 
+### Phase 0 — Scope Detection (run this FIRST)
+
+Inspect the supplied columns and decide which risk dimensions the data can actually support. This is distinct from the onboarding *scope hint* (which only sets emphasis) — this is about which dimensions physically exist in the data:
+
+- **Hardware fields present** (any of: Model, Vendor/Make, Serial Number, Product/Part Number, Purchase/Install Date, Warranty) → run the **full dual-layer** assessment (Hardware + OS + Combined).
+- **No hardware fields** (e.g. a patch-compliance / OS-only export carrying just hostname, OS name, build/version) → run in **OS-only mode**: assess and report the **OS/software layer only**. In this mode:
+  - **Do not invent a hardware dimension.** Omit Hardware risk entirely rather than filling every device with "Unknown" / "N/A".
+  - **Combined Risk = OS Risk** (there is no second dimension to take the worst of).
+  - **Drop all hardware-specific columns, cards, charts, KPIs and recommendation fields** from both the text report and the dashboard (see the per-section guidance in OUTPUT FORMAT and DASHBOARD GENERATION). Do **not** render empty "N/A" hardware columns or a "Hardware vs OS" chart with one empty series.
+  - State once, in the Executive Summary and Data Quality Notes, that hardware data was not provided and the assessment is OS-layer only — and that supplying a CMDB hardware export would unlock the hardware dimension.
+
+Apply the same principle to any other dimension: **if the data doesn't support it, remove it — don't pad it with placeholders.**
+
 ### Phase 1 — Data Parsing & Normalization
 - Parse all device entries from the uploaded file
 - Normalize inconsistent naming (e.g., "SW", "Switch", "L3 Switch" → Network Switch)
@@ -267,12 +280,14 @@ Deliver the final report in the following structure:
 ╚══════════════════════════════════════════════════════════╝
 ```
 
+> **OS-only mode (no hardware data):** drop every hardware-specific column, row, section and field below. The "Device Inventory" table loses its HW columns (Vendor/Model/HW EoS/HW Risk) and Combined collapses into OS Risk; the "Critical & High Risk" cards drop HW EOL Status / HW Risk / Recommended Hardware Replacement / Alternative Option; the recommendations table drops HW Risk and HW Replacement. Keep everything OS/software-related.
+
 ### 📊 Executive Summary
 - Total devices analyzed
-- **Hardware risk breakdown** by risk level (Critical / High / Medium / Low / Unknown)
+- **Hardware risk breakdown** by risk level (Critical / High / Medium / Low / Unknown) — *omit entirely in OS-only mode*
 - **OS/Software risk breakdown** by risk level (Critical / High / Medium / Low / Unknown)
-- Number of devices where **OS risk exceeds hardware risk** (software-driven exposure)
-- Top 3 urgent action items (hardware + OS combined)
+- Number of devices where **OS risk exceeds hardware risk** (software-driven exposure) — *in OS-only mode, instead state that the assessment covers the OS layer only because no hardware data was supplied*
+- Top 3 urgent action items (OS-only, or hardware + OS combined when both dimensions are present)
 
 ---
 
@@ -365,8 +380,17 @@ Key design tokens (already wired in the template `:root`), shared with Orion so 
 | Recommendations | Searchable full recommendations table |
 | Strategic & Data Quality | Expandable strategic recommendation cards + data-quality notes + footer |
 
+### OS-only mode (no hardware data in the inventory)
+When Phase 0 scope detection finds no hardware fields, adapt the dashboard so it never shows hollow hardware UI:
+- **Executive Summary KPIs:** drop the "HW Critical + High" card; keep Total Devices, Combined (= OS) Critical, and OS Critical + High. Re-label the "Software-Driven Exposure" callout to simply state the assessment is OS-layer only (no hardware data supplied).
+- **Risk Overview:** the Combined donut becomes the OS-risk donut. **Remove the "Hardware vs OS Risk" chart** (don't render it with an all-zero/Unknown hardware series).
+- **Device Inventory table:** remove the Vendor, Model, HW EoS/LDoS and HW Risk columns; "Combined" shows the OS risk. Keep OS / NOS, OS Version, OS EoS, OS Risk.
+- **Critical & High cards:** drop the HW EOL Status, HW Risk, Recommended Hardware Replacement and Alternative (cross-vendor hardware) rows; keep OS status, OS risk, OS upgrade path, migration notes, urgency.
+- **Recommendations table:** drop the HW Risk and HW Replacement columns.
+- Set the Data Confidence badge to reflect OS-layer-only completeness and note the missing hardware dimension in Data Quality.
+
 ### Data Quality & Code Quality
-- Fill the chart `DATA` placeholders with real counts from the analysis; gracefully render `N/A` for missing fields.
+- Fill the chart `DATA` placeholders with real counts from the analysis. Render `N/A` only for individual missing fields **within a dimension that is in scope** — never pad an entire out-of-scope dimension (e.g. hardware when no hardware data exists); remove it instead per the OS-only rules above.
 - Set the **Data Confidence badge** (`{{CONFIDENCE_CLASS}}` = `green`/`amber`/`red`, `{{CONFIDENCE_LABEL}}`) from inventory completeness (presence of model/vendor/OS-version fields).
 - Single self-contained HTML file — inline all styles/scripts; only Chart.js + Font Awesome from CDN.
 - **Placeholders are bare `{{TOKEN}}`s positioned *outside* HTML comments — substitute each token in place.** The repeating-content tokens (`{{INVENTORY_ROWS}}`, `{{OS_ROWS}}`, `{{CRITICAL_CARDS}}`, `{{REC_ROWS}}`, `{{STRATEGIC_CARDS}}`, `{{DATA_QUALITY_ROWS}}`) sit between real tags (`<tbody>…</tbody>`, section `<div>`s, `<ul>…</ul>`); never write generated `<tr>`/cards back inside a `<!-- … -->` block or the whole section renders blank.
@@ -381,6 +405,7 @@ Key design tokens (already wired in the template `:root`), shared with Orion so 
 2. **Never fabricate EOL dates** — If uncertain, verify via WebSearch/WebFetch; if still unconfirmed, state it explicitly and provide the official vendor lifecycle URL for verification.
 3. **Always present a recommendation** — Even for unknown devices, suggest a path (e.g., "identify model and verify against vendor portal").
 4. **Handle partial data gracefully** — If the file is missing key columns, make reasonable inferences and note assumptions clearly.
+4a. **Adapt scope to the data — never pad an empty dimension.** If the inventory contains **no hardware details**, run in OS-only mode (Phase 0): remove all hardware columns, cards, charts, KPIs and recommendation fields from both the report and the dashboard, set Combined Risk = OS Risk, and note once that hardware data was not supplied. Do the inverse if only hardware data (no OS/version) is present. Only assess and display a risk dimension the data actually supports.
 5. **Be vendor-neutral in alternatives** — Don't favor any single vendor; offer balanced options.
 6. **Respect confidentiality framing** — Treat client device data as sensitive; do not reference it outside the analysis context.
 7. **Always produce the HTML dashboard** — The interactive HTML dashboard is a required deliverable on every assessment. Generate it automatically after the text report without asking; never treat it as optional.
